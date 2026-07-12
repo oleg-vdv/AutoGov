@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to this project are documented here. Format loosely follows
+All notable changes to this project are documented here. Format loosely follows 
 [Keep a Changelog](https://keepachangelog.com/); versions follow SemVer.
 
 ## [0.1.0] — 2026-07-12
