@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+  <defs>
+    <style>
+      .bg{fill:#0f1419}
+      .panel{fill:#171e26;stroke:#2a3543;stroke-width:1.5;rx:10}
+      .core{fill:#141b30;stroke:#3b4a6b;stroke-width:1.5}
+      .t{fill:#dbe4ee;font-size:14px;font-weight:600}
+      .s{fill:#8296ab;font-size:11px}
+      .lbl{fill:#4aa8ff;font-size:12px;font-weight:700}
+      .arrow{stroke:#4a5a6b;stroke-width:2;fill:none;marker-end:url(#a)}
+      .crit{fill:#ff5370}
+      .accent{fill:#4aa8ff}
+      .ok{fill:#9ece6a}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#4a5a6b"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="900" height="560"/>
+  <text x="30" y="38" class="t" font-size="18">AutoGov — Control Plane для теневой автоматизации</text>
+  <text x="30" y="58" class="s">Агенты (outbound-only, mTLS, подписанные) → Ingest → Event Bus → плагины M1..M4 → Findings → SIEM / UI</text>
+
+  <!-- Agents -->
+  <g>
+    <rect class="panel" x="30" y="90" width="180" height="150" rx="10"/>
+    <text x="45" y="115" class="lbl">AGENTS (host sensors)</text>
+    <text x="45" y="140" class="s">• Docker (read-only)</text>
+    <text x="45" y="160" class="s">• Процессы /proc</text>
+    <text x="45" y="180" class="s">• ФС: ~/.n8n, compose</text>
+    <text x="45" y="200" class="s">• cron / systemd</text>
+    <text x="45" y="220" class="s">• сетевой фингерпринт</text>
+  </g>
+  <text x="45" y="262" class="s" font-style="italic">секреты не покидают хост →</text>
+  <text x="45" y="278" class="s" font-style="italic">только SHA-256-отпечатки</text>
+
+  <!-- arrow agents -> ingest -->
+  <path class="arrow" d="M212,150 L250,150"/>
+  <text x="215" y="142" class="s" font-size="10">mTLS</text>
+
+  <!-- Control plane core -->
+  <rect x="255" y="80" width="470" height="330" rx="12" fill="#0c1320" stroke="#2a3543" stroke-width="1.5"/>
+  <text x="270" y="104" class="lbl">CONTROL PLANE</text>
+
+  <rect class="core" x="270" y="118" width="130" height="52" rx="8"/>
+  <text x="285" y="140" class="t" font-size="12">Ingest API</text>
+  <text x="285" y="158" class="s">dedup, idempotent</text>
+
+  <path class="arrow" d="M402,144 L432,144"/>
+
+  <rect class="core" x="435" y="118" width="130" height="52" rx="8"/>
+  <text x="450" y="140" class="t" font-size="12">Event Bus</text>
+  <text x="450" y="158" class="s">pub / sub</text>
+
+  <path class="arrow" d="M567,144 L597,144"/>
+
+  <rect class="core" x="600" y="118" width="112" height="52" rx="8"/>
+  <text x="612" y="140" class="t" font-size="12">Module</text>
+  <text x="612" y="156" class="t" font-size="12">Runtime</text>
+
+  <!-- modules row -->
+  <rect x="270" y="188" width="105" height="46" rx="8" fill="#1a2740" stroke="#4aa8ff" stroke-width="1.5"/>
+  <text x="282" y="208" class="accent" font-size="12" font-weight="700">M1 Discovery</text>
+  <text x="282" y="225" class="s">MVP ✓</text>
+
+  <rect x="385" y="188" width="105" height="46" rx="8" fill="#171e26" stroke="#2a3543" stroke-width="1.5"/>
+  <text x="397" y="208" class="s" font-size="12">M2 HoneyNodes</text>
+  <text x="397" y="225" class="s">plugin</text>
+
+  <rect x="500" y="188" width="100" height="46" rx="8" fill="#171e26" stroke="#2a3543" stroke-width="1.5"/>
+  <text x="512" y="208" class="s" font-size="12">M3 Self-heal</text>
+  <text x="512" y="225" class="s">plugin</text>
+
+  <rect x="610" y="188" width="102" height="46" rx="8" fill="#171e26" stroke="#2a3543" stroke-width="1.5"/>
+  <text x="622" y="208" class="s" font-size="12">M4 Autodoc</text>
+  <text x="622" y="225" class="s">plugin</text>
+
+  <!-- stores row -->
+  <rect class="core" x="270" y="252" width="130" height="50" rx="8"/>
+  <text x="285" y="273" class="t" font-size="12">Asset Store</text>
+  <text x="285" y="291" class="s">inventory</text>
+
+  <rect class="core" x="415" y="252" width="130" height="50" rx="8"/>
+  <text x="430" y="273" class="t" font-size="12">Risk Engine</text>
+  <text x="430" y="291" class="s">scoring + объяснения</text>
+
+  <rect class="core" x="560" y="252" width="152" height="50" rx="8"/>
+  <text x="575" y="273" class="t" font-size="12">Findings + Notifier</text>
+  <text x="575" y="291" class="s">syslog/CEF, webhook</text>
+
+  <!-- UI / API -->
+  <rect class="core" x="340" y="330" width="150" height="52" rx="8"/>
+  <text x="355" y="352" class="t" font-size="12">Web UI (RBAC)</text>
+  <text x="355" y="370" class="s">дашборд, карта доступа</text>
+
+  <rect class="core" x="505" y="330" width="150" height="52" rx="8"/>
+  <text x="520" y="352" class="t" font-size="12">Public REST API</text>
+  <text x="520" y="370" class="s">отчёты JSON/CSV/PDF</text>
+
+  <!-- SIEM out -->
+  <path class="arrow" d="M727,277 L775,277"/>
+  <rect class="panel" x="778" y="250" width="100" height="56" rx="10"/>
+  <text x="790" y="275" class="ok" font-size="12" font-weight="700">SIEM</text>
+  <text x="790" y="293" class="s">Wazuh / Splunk</text>
+
+  <!-- privacy / onprem footer -->
+  <rect x="30" y="440" width="848" height="90" rx="10" fill="#12190f" stroke="#2f4023" stroke-width="1.5"/>
+  <text x="45" y="466" class="ok" font-size="13" font-weight="700">Privacy by design · On-prem по умолчанию · Подписанные артефакты (ed25519)</text>
+  <text x="45" y="490" class="s">• Значения секретов и ПДн не хранятся и не покидают периметр (Закон РК № 94-V)</text>
+  <text x="45" y="510" class="s">• On-prem egress-guard блокирует внешних адресатов · Агент проверяет подпись своего бинарника при старте (fail-closed)</text>
+</svg>

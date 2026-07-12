@@ -113,6 +113,17 @@ func TestDockerN8NDetection(t *testing.T) {
 	if f.Score <= 0 || f.Explanation == "" {
 		t.Errorf("expected scored finding with explanation, got score=%.1f expl=%q", f.Score, f.Explanation)
 	}
+	// The postgres backend reachability (database access) must be reflected in
+	// the score on the very first observation, not only after a later rescan.
+	hasDBFactor := false
+	for _, factor := range f.Factors {
+		if factor.Key == "prod_access:database" {
+			hasDBFactor = true
+		}
+	}
+	if !hasDBFactor {
+		t.Error("database reachability must be scored on the first docker observation")
+	}
 }
 
 // ТЗ §8.2: idempotent ingest — re-sending the same observation must not

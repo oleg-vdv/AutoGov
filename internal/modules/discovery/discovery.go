@@ -178,18 +178,21 @@ func (m *Module) handleDocker(ev model.Event, api *modules.API) error {
 		LastSeen:      ev.Time,
 	}
 
-	m.upsertAndScore(api, inst)
-
-	// Reachability from env fingerprints: DB link is production access (§5.3).
+	// Reachability from env fingerprints must be recorded BEFORE scoring so the
+	// finding reflects production access (§5.3). inst.ID is deterministic, so
+	// the edges attach to the same instance the upsert will store.
+	instID := inst.ID
 	if dbType == "postgres" {
-		m.addReachability(api, inst.ID, "postgres (n8n backend)", "database", "env", ev.Time)
+		m.addReachability(api, instID, "postgres (n8n backend)", "database", "env", ev.Time)
 	}
 	for _, k := range secretKeys {
 		if sys, cat := classifyEnvTarget(k); cat != "" {
-			m.addReachability(api, inst.ID, sys, cat, "env", ev.Time)
-			m.addCredentialRef(api, inst.ID, "env:"+k, k, sys, cat, c.SecretEnvs[k], ev)
+			m.addReachability(api, instID, sys, cat, "env", ev.Time)
+			m.addCredentialRef(api, instID, "env:"+k, k, sys, cat, c.SecretEnvs[k], ev)
 		}
 	}
+
+	m.upsertAndScore(api, inst)
 	return nil
 }
 

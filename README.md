@@ -1,198 +1,146 @@
-# AutoGov — Control Plane для теневой автоматизации
+<div align="center">
 
-Governance-платформа для self-hosted-автоматизаций (в первую очередь **n8n**).
-Закрывает жизненный цикл теневой автоматизации по формуле
-**найти → задокументировать → защитить → чинить**.
+# 🛡️ AutoGov
 
-Реализация по ТЗ v0.1 (`docs/TZ.md`). Текущий объём — **MVP (Этап Э1): модуль
-M1 «Обнаружение»** поверх универсального ядра-платформы (Требование ТЗ-0).
+### Control plane for **shadow automation** — find the unmanaged n8n instances leaking access to your production systems
 
-> **Статус:** MVP, годный к пилоту. Модули M2–M4 присутствуют как
-> плагины-заглушки, доказывающие плагинную архитектуру ядра.
+Employees spin up **self-hosted n8n** in Docker on laptops and servers, wire in
+live credentials to 1C / CRM / databases / payment APIs, and run workflows
+**without security's knowledge**. Existing Shadow-IT tools see SaaS/OAuth — they
+**do not see locally-deployed automations**. AutoGov does.
 
-**Документация:** [Руководство пользователя](docs/USAGE.md) ·
-[Архитектура](docs/ARCHITECTURE.md) · [Go-to-Market / как продавать](docs/GO_TO_MARKET.md) ·
-[ТЗ](docs/TZ.md)
+**find → document → protect → heal**
 
----
+[![CI](https://github.com/oleg-vdv/AutoGov/actions/workflows/ci.yml/badge.svg)](https://github.com/oleg-vdv/AutoGov/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Go 1.24](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev)
+![Zero dependencies](https://img.shields.io/badge/dependencies-stdlib_only-9ece6a.svg)
+![Status: MVP](https://img.shields.io/badge/status-MVP%20%C2%B7%20pilot--ready-orange.svg)
 
-## Что делает MVP
+[**Quick start**](#-quick-start-2-minutes) ·
+[Usage guide](docs/USAGE.md) ·
+[Architecture](docs/ARCHITECTURE.md) ·
+[Go-to-market](docs/GO_TO_MARKET.md) ·
+[Русская версия](docs/README.ru.md)
 
-- **Обнаруживает** инстансы n8n множеством методов (ТЗ §5.1): Docker-инспекция,
-  процессы, сетевой фингерпринт (`/rest`, `/api/v1/docs`, `/healthz`),
-  файловая система (`~/.n8n`, `docker-compose`, `.env`), cron/systemd-таймеры.
-  Детект — **многосигнальный** (не по одному признаку), чтобы снижать ложные
-  срабатывания.
-- **Инвентаризирует** активы (ТЗ §5.2): хост, владелец, способ запуска, версия,
-  сетевая доступность, тип БД, режим single/queue.
-- **Строит карту** «инстанс → креды → целевые системы» (ТЗ §5.3): к каким
-  1С/CRM/БД/платёжным/облачным системам имеет доступ теневой инстанс.
-- **Оценивает риск** (ТЗ §5.4): числовой скор + категория Critical/High/Medium/Low
-  + **объяснение на естественном языке** (генерируется локально, без внешних LLM).
-- **Управляет ложными срабатываниями** (ТЗ §5.6): whitelisting по хосту/образу/
-  движку/инстансу.
-- **Оповещает и отчитывается** (ТЗ §5.5): syslog/CEF для SIEM (Wazuh/Splunk),
-  webhook, e-mail, Telegram; экспорт отчёта в JSON/CSV/PDF; веб-дашборд.
-
-### Приватность и локализация (критично для РК)
-
-- **Privacy by design** (ТЗ §7, §9): в модели данных **нет полей** для значений
-  секретов и содержимого ПДн. Агент фиксирует только **факт** наличия секрета,
-  его тип и целевую систему — значение **никогда** не извлекается и не передаётся
-  (только SHA-256-отпечаток для корреляции).
-- **Подписанные артефакты** (ТЗ §9): агент проверяет свой бинарник по
-  ed25519-подписанному манифесту при старте и отказывается работать при
-  подмене (fail-closed). См. `cmd/autogov-sign` и [USAGE §7](docs/USAGE.md).
-- **On-prem по умолчанию** (ТЗ §8.4): в режиме `onprem` любой исходящий трафик во
-  внешние сервисы (включая внешние LLM) **запрещён** и требует явного включения
-  администратором (`allow_external_egress`) с предупреждением о трансграничной
-  передаче (Закон РК № 94-V). Egress-guard проверяется на старте — внешний
-  адресат ломает запуск, а не «молча течёт».
+</div>
 
 ---
 
-## Архитектура
+<div align="center">
+<img src="docs/assets/dashboard.png" alt="AutoGov dashboard: risk-scored shadow n8n instances with access map" width="900">
+<br/><sub>The dashboard: risk-scored findings with plain-language explanations, the “instance → credentials → target systems” access map, and sensor inventory.</sub>
+</div>
 
-```
-Агенты (outbound-only, mTLS) ──▶ Ingest API ──▶ Event Bus ──▶ Module Runtime (плагины M1..M4)
-                                                                   │
-                        Asset Store ◀── Risk Engine ── Findings ──┤──▶ Notifier (syslog/CEF, webhook, ...)
-                                                                   │
-                                              Web UI / Public API (RBAC + аудит)
-```
+---
 
-Ключевой инвариант (**ТЗ-0**): ядро (агент + control plane + модель данных +
-шина событий) — универсальное; **M1 — первый вертикальный срез** поверх него.
-M2–M4 подключаются как плагины **без изменения ядра**. Это проверяется тестом
-`internal/modules/plugin_test.go` (модуль M2 HoneyNodes встаёт на ту же шину и
-хранилище и выдаёт находку).
+## Why AutoGov
 
-Подробности — в [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+- 🔍 **Sees what others miss.** SaaS-discovery tools (Defender for Cloud Apps,
+  Nudge, Auvik) find OAuth apps. EDRs inventory processes. Neither maps a
+  shadow `localhost:5678` n8n instance to the **1C and payment systems it can
+  reach**. AutoGov builds exactly that graph.
+- 🧭 **Access map, not just an inventory.** For every unmanaged instance:
+  *which credentials → which production systems*, with a numeric risk score, a
+  Critical/High/Medium/Low category, and a **human-readable “why”** for the
+  CISO report.
+- 🔒 **Privacy by design.** The agent records the **fact** a secret exists — its
+  name, type and target — but **never reads or transmits the value** (only a
+  SHA-256 fingerprint). No field in the data model can hold a secret or PII.
+- 🇰🇿 **On-prem / in-country by default.** In on-prem mode all external egress
+  (including external LLMs) is **refused** — no cross-border transfer
+  (Kazakhstan Law No. 94-V). Fully air-gappable: no external dependencies.
+- 🧩 **Platform, not a monolith.** A universal core (agent + control plane +
+  data model + event bus); M1 Discovery is the first vertical slice, M2–M4 plug
+  in as modules **without touching the core** — proven by tests.
+- 🔐 **Secure by construction.** Outbound-only agent (no listening ports),
+  mTLS, read-only Docker socket, RBAC + audit log, and **signed release
+  artifacts** the agent verifies at startup (fail-closed).
 
-### Компоненты
+<div align="center">
+<img src="docs/assets/architecture.svg" alt="AutoGov architecture" width="820">
+</div>
 
-| Путь | Назначение |
+## How detection works (multi-signal, low false positives)
+
+The agent detects n8n by a **combination** of signals — never one — to keep
+false positives low:
+
+| Signal | What it inspects |
 |---|---|
-| `cmd/controlplane` | Центральный сервер: ingest, API, UI, модули |
-| `cmd/agent` | Хост-сенсор (outbound-only), коллекторы + spool |
-| `cmd/autogov-sign` | Подпись релизов (ed25519) и проверка целостности (ТЗ §9) |
-| `internal/signing` | ed25519-подпись манифеста + проверка хеша бинарника |
-| `internal/model` | Модель данных (ТЗ §7) |
-| `internal/bus` | Событийная шина |
-| `internal/store` | Хранилище активов/находок (JSON snapshot + JSONL-аудит) |
-| `internal/modules` | Module Runtime + плагины `discovery` (M1), `honeynodes` (M2), `selfhealing` (M3), `autodoc` (M4) |
-| `internal/risk` | Риск-скоринг с локальными объяснениями |
-| `internal/agent/...` | Коллекторы, sanitizer (privacy-guard), disk spool |
-| `internal/notify` | Нотификаторы + on-prem egress-guard |
-| `internal/report` | Отчёты JSON/CSV/PDF (PDF — без внешних зависимостей) |
-| `internal/server` | HTTP-сервер, RBAC, аудит, встроенный дашборд |
+| 🐳 Docker | `n8nio/n8n` images, port 5678, `N8N_*` env, linked postgres/redis (queue mode) — via **read-only** socket |
+| ⚙️ Processes | Node.js n8n signatures, Python runners/schedulers in `/proc` |
+| 🌐 Network | HTTP fingerprint: `/rest` + `/api/v1/docs` + `/healthz` uniquely identify n8n |
+| 📁 Filesystem | `~/.n8n`, `docker-compose.yml` with n8n, `.env` referencing `N8N_ENCRYPTION_KEY` |
+| ⏰ Schedulers | `cron` entries and `systemd` timers launching automation runners |
 
-Реализация — **чистая стандартная библиотека Go**, без внешних зависимостей
-(важно для аудируемости агента и air-gapped-развёртывания).
+Legitimate (IT-sanctioned) instances go on a **whitelist** so the product
+doesn't cry wolf on CI/CD containers — a first-release requirement, not a
+“later”.
 
----
+## 🚀 Quick start (2 minutes)
 
-## Быстрый старт (демо-стек)
-
-Поднимает control plane + агент + намеренно «теневой» n8n (тестовый периметр
-из критериев приёмки ТЗ §12):
+Requires Docker with the Compose plugin.
 
 ```bash
-cd deploy
+git clone https://github.com/oleg-vdv/AutoGov.git
+cd AutoGov/deploy
 docker compose up --build
 ```
 
-Откройте `http://localhost:8443`, войдите токеном `dev-admin` (роль admin).
-Через ~30 c агент обнаружит контейнер `shadow-n8n`, построит инвентарь и
-покажет находки с риск-скором.
+This brings up the control plane, an intentionally **shadow** n8n instance, and
+an agent. Open **http://localhost:8443**, log in with token `dev-admin`. Within
+~30 s the agent discovers the n8n instance, builds the access map, and shows
+risk-scored findings.
 
-> Демо использует dev-токены и HTTP. Для пилота включите TLS/mTLS, замените все
-> токены и оставьте `mode: onprem`.
+> Demo uses HTTP and dev tokens — local evaluation only. For a pilot, enable
+> TLS/mTLS, replace tokens, and keep `mode: onprem`. See the
+> [usage guide](docs/USAGE.md).
 
-### Локальный запуск без Docker
-
-```bash
-go build -o bin/ ./cmd/...
-
-# control plane
-./bin/controlplane -config deploy/controlplane.example.json
-
-# агент (на защищаемом хосте)
-./bin/agent -config deploy/agent.example.json          # демон
-./bin/agent -config deploy/agent.example.json -once     # один проход (для проверки)
-```
-
----
-
-## Роли и API (RBAC, ТЗ §9)
-
-| Роль | Доступ |
-|---|---|
-| `viewer` | Сводка, инстансы, находки, хосты |
-| `analyst` | + карта доступа (чувствительный артефакт), смена статуса находок, автодокументация |
-| `admin` | + whitelisting, экспорт отчётов, аудит-лог |
-
-Основные эндпоинты (`Authorization: Bearer <token>`):
-
-```
-POST /ingest/v1/events                      # приём наблюдений от агентов (agent-токен + опц. mTLS)
-GET  /api/v1/summary                        # KPI для дашборда
-GET  /api/v1/instances[?engine=n8n]         # инвентарь
-GET  /api/v1/instances/{id}                 # инстанс + воркфлоу + (analyst+) креды/reachability
-GET  /api/v1/findings[?severity=critical]   # находки
-POST /api/v1/findings/{id}/{ack|resolve|reopen}
-GET  /api/v1/reachability                   # карта доступа (analyst+)
-GET/POST/DELETE /api/v1/whitelist[/{id}]    # управление ложными срабатываниями (admin)
-GET  /api/v1/reports/export?format=json|csv|pdf   # отчёты (admin)
-GET  /api/v1/docs/infra.md                  # автодокументация (M4, analyst+)
-GET  /api/v1/audit                          # аудит-лог (admin)
-```
-
----
-
-## Тесты
+### Build from source
 
 ```bash
-go test ./...
+make build   # → bin/agent, bin/controlplane, bin/autogov-sign
+make test
 ```
 
-Покрывают ключевые инварианты ТЗ:
-- **§5.1/§9/§12 п.3** — sanitizer никогда не выпускает значения секретов;
-- **§5.1/§5.3/§5.4** — end-to-end pipeline детекта n8n, карты доступа и скоринга;
-- **§5.6** — многосигнальность и whitelisting снижают ложные срабатывания;
-- **§8.2** — идемпотентность приёма (нет дублей находок);
-- **§8.4** — on-prem egress-guard блокирует внешних адресатов;
-- **ТЗ-0** — плагинная модель (модуль M2 без изменения ядра).
+Pure Go standard library — **no external dependencies** (auditable agent,
+air-gapped installs).
 
----
+## Components
 
-## Соответствие критериям приёмки MVP (ТЗ §12)
-
-| Критерий | Где реализовано |
+| Path | Purpose |
 |---|---|
-| 1. Обнаружение n8n всеми методами, ≤5% FP после whitelist | `internal/agent/collect/*`, `internal/modules/discovery`, whitelisting в `store`/`server` |
-| 2. Карта «креды → целевые системы» + риск-категория | `discovery` (reachability) + `internal/risk` |
-| 3. Ни одного значения секрета не извлекается/передаётся | `internal/agent/sanitize` + модель без полей секретов |
-| 4. On-prem без исходящих соединений | `mode:onprem` + `notify.EgressGuard` |
-| 5. Отчёт (PDF/JSON) + находки в Wazuh через syslog/CEF | `internal/report`, `internal/notify` (CEF) |
+| `cmd/controlplane` | Central server: ingest, API, UI, modules |
+| `cmd/agent` | Host sensor (outbound-only), collectors + disk spool |
+| `cmd/autogov-sign` | Release signing (ed25519) + integrity verification |
+| `internal/modules` | Module Runtime + `discovery` (M1) and M2–M4 plugin stubs |
+| `internal/risk` | Risk scoring with local (no-LLM) explanations |
+| `internal/agent/sanitize` | Privacy guard: secret values never leave the host |
+| `internal/notify` | Notifiers (syslog/CEF, webhook, email) + on-prem egress guard |
 
----
+## Roadmap
 
-## Дорожная карта
+- [x] **Stage 1 — M1 Discovery for n8n (MVP, pilot-ready)**
+- [ ] Stage 2 — generic automations (Make agents, scripts), Windows agent, more SIEM
+- [ ] Stage 3 — M2 HoneyNodes (contract + stub already in place)
+- [ ] Stage 4 — M3 Self-healing / M4 Autodoc (contracts + stubs already in place)
 
-- **Э1 (сделано):** M1 Discovery для n8n — MVP.
-- **Э2:** обобщённые автоматизации (Make-агенты, скрипты), Windows-агент,
-  расширенные SIEM-интеграции.
-- **Э3:** M2 HoneyNodes (контракт и заглушка уже есть).
-- **Э4:** M3 Self-healing / M4 Autodoc (контракты и заглушки уже есть).
+## Business & positioning
 
----
+AutoGov follows an **open-core** model: the agent and platform core are open
+(auditability removes the adoption barrier for a privileged sensor); paid
+modules M2–M4 are the up-sell. Full ICP, value-by-role, competitive moat and a
+90-day validation plan are in **[docs/GO_TO_MARKET.md](docs/GO_TO_MARKET.md)**.
 
-## Правовые замечания (из ТЗ §13)
+## Contributing & security
 
-- **Лицензия n8n (SUL):** продукт **инспектирует** уже развёрнутые клиентом
-  инстансы, **не хостит** n8n как сервис. Текст SUL проверить построчно до релиза.
-- **Закон РК № 94-V (локализация ПДн):** on-prem-режим + запрет внешнего egress
-  по умолчанию.
-- **Закон РК № 256-VIII по ИИ** (в силе с 11.07.2026): требуется юридический
-  разбор применимости к ИИ-компонентам (объяснения рисков, будущий M3).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). The
+privacy invariant is non-negotiable: a change that makes the agent transmit
+secret values will not be merged.
+
+## License
+
+[Apache License 2.0](LICENSE).
+
+<div align="center"><sub>Built to give security teams a control plane for the shadow-automation boom. Not affiliated with n8n GmbH — AutoGov inspects instances you already run, it does not host n8n.</sub></div>
