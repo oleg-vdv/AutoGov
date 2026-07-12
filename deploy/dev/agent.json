@@ -1,0 +1,11 @@
+{
+  "agent_id": "dev-agent",
+  "control_plane_url": "http://controlplane:8443",
+  "token": "dev-agent-token",
+  "interval_seconds": 30,
+  "spool_dir": "/var/lib/autogov-agent/spool",
+  "docker_socket": "/var/run/docker.sock",
+  "net_targets": ["shadow-n8n:5678"],
+  "labels": { "env": "demo" },
+  "tls": { "insecure_skip_verify": false }
+}

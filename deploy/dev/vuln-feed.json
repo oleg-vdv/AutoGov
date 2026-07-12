@@ -1,0 +1,3 @@
+[
+  { "engine": "n8n", "max_version_exclusive": "1.42.0", "advisory": "demo advisory: upgrade n8n" }
+]

@@ -1,0 +1,25 @@
+{
+  "listen": ":8443",
+  "data_dir": "/var/lib/autogov/data",
+  "mode": "onprem",
+  "allow_external_egress": false,
+  "tls": {
+    "cert_file": "/etc/autogov/tls/server.crt",
+    "key_file": "/etc/autogov/tls/server.key",
+    "client_ca_file": "/etc/autogov/tls/agent-ca.crt"
+  },
+  "agent_tokens": ["CHANGE-ME-agent-token"],
+  "api_tokens": {
+    "CHANGE-ME-admin-token": "admin",
+    "CHANGE-ME-analyst-token": "analyst",
+    "CHANGE-ME-viewer-token": "viewer"
+  },
+  "vuln_feed": "/etc/autogov/vuln-feed.json",
+  "notify": {
+    "min_severity": "medium",
+    "syslog": [
+      { "network": "udp", "address": "10.0.0.10:514" }
+    ],
+    "webhooks": []
+  }
+}

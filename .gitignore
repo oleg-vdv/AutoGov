@@ -1,0 +1,16 @@
+# Build artifacts
+/bin/
+*.exe
+*.test
+*.out
+
+# Local runtime data
+/data/
+*.log
+deploy/dev/tls/
+
+# Editor
+.idea/
+.vscode/
+*.swp
+.DS_Store

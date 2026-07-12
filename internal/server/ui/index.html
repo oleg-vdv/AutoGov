@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoGov — Control Plane</title>
+<style>
+:root{--bg:#0f1419;--panel:#171e26;--border:#2a3543;--text:#dbe4ee;--muted:#8296ab;
+--crit:#ff5370;--high:#ff9e64;--med:#e5c07b;--low:#7dcfff;--ok:#9ece6a;--accent:#4aa8ff}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif;padding:24px}
+h1{font-size:20px;margin-bottom:4px}
+h2{font-size:15px;margin:24px 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sub{color:var(--muted);margin-bottom:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card .n{font-size:26px;font-weight:700}
+.card .l{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+th,td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+tr:last-child td{border-bottom:none}
+.tablewrap{overflow-x:auto}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase}
+.b-critical{background:rgba(255,83,112,.15);color:var(--crit)}
+.b-high{background:rgba(255,158,100,.15);color:var(--high)}
+.b-medium{background:rgba(229,192,123,.15);color:var(--med)}
+.b-low{background:rgba(125,207,255,.15);color:var(--low)}
+.b-info{background:rgba(130,150,171,.15);color:var(--muted)}
+.b-ok{background:rgba(158,206,106,.15);color:var(--ok)}
+button{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:12px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#04121f;font-weight:600}
+input{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px}
+#login{max-width:420px;margin:12vh auto;text-align:center}
+#login input{width:100%;margin:12px 0}
+.expl{color:var(--muted);font-size:12px;max-width:560px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.err{color:var(--crit);margin-top:8px}
+a{color:var(--accent)}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>AutoGov Control Plane</h1>
+  <p class="sub">Governance-платформа для self-hosted автоматизаций</p>
+  <input id="token" type="password" placeholder="API-токен (роль viewer/analyst/admin)">
+  <button class="primary" onclick="login()">Войти</button>
+  <div id="loginerr" class="err"></div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="topbar">
+    <div>
+      <h1>AutoGov — теневые автоматизации</h1>
+      <p class="sub">найти → задокументировать → защитить → чинить</p>
+    </div>
+    <div class="row">
+      <button onclick="exportReport('json')">Отчёт JSON</button>
+      <button onclick="exportReport('csv')">CSV</button>
+      <button onclick="exportReport('pdf')">PDF</button>
+      <button onclick="logout()">Выйти</button>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <h2>Находки (риск-скоринг)</h2>
+  <div class="tablewrap"><table id="findings">
+    <thead><tr><th>Риск</th><th>Скор</th><th>Находка</th><th>Статус</th><th>Действия</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <h2>Инстансы автоматизаций</h2>
+  <div class="tablewrap"><table id="instances">
+    <thead><tr><th>Движок</th><th>Идентификация</th><th>Запуск</th><th>Доступность</th><th>Версия</th><th>Обнаружен</th><th>Сигналы</th><th>WL</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <h2>Карта доступа: инстанс → целевые системы</h2>
+  <div class="tablewrap"><table id="reach">
+    <thead><tr><th>Инстанс</th><th>Целевая система</th><th>Категория</th><th>Через</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+
+  <h2>Хосты-сенсоры</h2>
+  <div class="tablewrap"><table id="hosts">
+    <thead><tr><th>Хост</th><th>ОС</th><th>IP</th><th>Агент</th><th>Последний контакт</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</div>
+
+<script>
+let TOKEN = sessionStorage.getItem('autogov_token') || '';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({'Authorization': 'Bearer ' + TOKEN}, opts.headers);
+  const r = await fetch(path, opts);
+  if (r.status === 401) { logout(); throw new Error('unauthorized'); }
+  if (r.status === 403) return null; // role too low for this endpoint — hide section
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function login() {
+  TOKEN = $('#token').value.trim();
+  try {
+    await api('/api/v1/summary');
+    sessionStorage.setItem('autogov_token', TOKEN);
+    show();
+  } catch (e) { $('#loginerr').textContent = 'Неверный токен или сервер недоступен'; }
+}
+function logout(){ sessionStorage.removeItem('autogov_token'); location.reload(); }
+
+function show(){ $('#login').style.display='none'; $('#app').style.display='block'; refresh(); setInterval(refresh, 15000); }
+
+const badge = s => `<span class="badge b-${esc(s)}">${esc(s)}</span>`;
+const expoRu = {localhost:'только localhost', lan:'LAN', public:'ПУБЛИЧНЫЙ', unknown:'—'};
+
+async function refresh() {
+  const [sum, findings, instances, hosts, reach] = await Promise.all([
+    api('/api/v1/summary'), api('/api/v1/findings'), api('/api/v1/instances'),
+    api('/api/v1/hosts'), api('/api/v1/reachability')
+  ]);
+  const bs = sum.findings_by_severity || {};
+  $('#cards').innerHTML = [
+    ['Хостов', sum.hosts], ['Инстансов', sum.instances],
+    ['Теневых', sum.shadow_instances], ['Новых за 24ч', sum.instances_new_last_24h],
+    ['Critical', bs.critical||0, 'crit'], ['High', bs.high||0, 'high']
+  ].map(([l,n,c]) => `<div class="card"><div class="n" ${c?`style="color:var(--${c})"`:''}>${n}</div><div class="l">${l}</div></div>`).join('');
+
+  const instById = {};
+  (instances||[]).forEach(i => instById[i.id] = i);
+
+  $('#findings tbody').innerHTML = (findings||[]).map(f => `
+    <tr>
+      <td>${badge(f.severity)}</td>
+      <td><b>${f.score}</b></td>
+      <td>${esc(f.title)}<div class="expl">${esc(f.explanation)}</div></td>
+      <td>${f.status==='whitelisted'?'<span class="badge b-ok">whitelisted</span>':esc(f.status)}</td>
+      <td class="row">
+        ${f.status==='new'?`<button onclick="act('${f.id}','ack')">Принять</button>`:''}
+        ${f.status!=='resolved'?`<button onclick="act('${f.id}','resolve')">Решено</button>`:`<button onclick="act('${f.id}','reopen')">Reopen</button>`}
+        ${instById[f.instance_id] && !instById[f.instance_id].whitelisted ? `<button onclick="whitelist('${f.instance_id}')">В белый список</button>`:''}
+      </td>
+    </tr>`).join('') || '<tr><td colspan="5" class="expl">Находок пока нет — агенты ещё не прислали наблюдения</td></tr>';
+
+  $('#instances tbody').innerHTML = (instances||[]).map(i => `
+    <tr>
+      <td><b>${esc(i.engine)}</b></td>
+      <td class="mono">${esc(i.identity)}</td>
+      <td>${esc(i.run_mode||'—')}</td>
+      <td>${i.exposure==='public'?'<span class="badge b-critical">public</span>':esc(expoRu[i.exposure]||i.exposure)}</td>
+      <td>${esc(i.version||'—')}</td>
+      <td>${new Date(i.first_seen).toLocaleString()}</td>
+      <td class="mono">${(i.detected_by||[]).map(esc).join(', ')} (${Math.round((i.confidence||0)*100)}%)</td>
+      <td>${i.whitelisted?'<span class="badge b-ok">да</span>':'—'}</td>
+    </tr>`).join('') || '<tr><td colspan="8" class="expl">Инстансы не обнаружены</td></tr>';
+
+  const reachRows = (reach||[]).map(r => `
+    <tr><td class="mono">${esc((instById[r.instance_id]||{}).identity || r.instance_id)}</td>
+    <td>${esc(r.target_system)}</td><td>${badge(r.target_category==='payments'||r.target_category==='erp_1c'?'critical':'medium')} ${esc(r.target_category)}</td>
+    <td>${esc(r.via)}</td></tr>`).join('');
+  $('#reach tbody').innerHTML = reachRows ||
+    `<tr><td colspan="4" class="expl">${reach===null?'Карта доступа доступна ролям analyst/admin':'Рёбра доступа пока не построены'}</td></tr>`;
+
+  $('#hosts tbody').innerHTML = (hosts||[]).map(h => `
+    <tr><td><b>${esc(h.hostname)}</b></td><td>${esc(h.os)}</td>
+    <td class="mono">${(h.ips||[]).map(esc).join(', ')}</td>
+    <td class="mono">${esc(h.agent_id||'')} v${esc(h.agent_version||'?')}</td>
+    <td>${new Date(h.last_seen).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="5" class="expl">Агенты не подключены</td></tr>';
+}
+
+async function act(id, action) {
+  await api(`/api/v1/findings/${id}/${action}`, {method:'POST'});
+  refresh();
+}
+
+async function whitelist(instanceId) {
+  const reason = prompt('Причина добавления в белый список (санкционировано ИТ):');
+  if (!reason) return;
+  const res = await api('/api/v1/whitelist', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({kind:'instance', pattern:instanceId, reason})});
+  if (res === null) alert('Требуется роль admin');
+  refresh();
+}
+
+async function exportReport(fmt) {
+  const r = await fetch('/api/v1/reports/export?format=' + fmt, {headers:{'Authorization':'Bearer '+TOKEN}});
+  if (r.status === 403) { alert('Экспорт доступен роли admin'); return; }
+  const blob = await r.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (r.headers.get('Content-Disposition')||'').match(/filename="(.+)"/)?.[1] || ('autogov-report.' + fmt);
+  a.click();
+}
+
+if (TOKEN) { api('/api/v1/summary').then(show).catch(()=>{}); }
+</script>
+</body>
+</html>

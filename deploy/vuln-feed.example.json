@@ -1,0 +1,7 @@
+[
+  {
+    "engine": "n8n",
+    "max_version_exclusive": "1.42.0",
+    "advisory": "Older n8n releases; review changelog for known auth/RCE fixes"
+  }
+]

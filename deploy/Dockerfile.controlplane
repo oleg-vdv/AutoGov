@@ -1,0 +1,13 @@
+# Control plane image (ТЗ §10: Docker Compose MVP). Distroless, static binary.
+FROM golang:1.24 AS build
+WORKDIR /src
+COPY go.mod ./
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags "-s -w" \
+    -o /out/controlplane ./cmd/controlplane
+
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /out/controlplane /usr/local/bin/controlplane
+USER nonroot:nonroot
+EXPOSE 8443
+ENTRYPOINT ["/usr/local/bin/controlplane", "-config", "/etc/autogov/controlplane.json"]

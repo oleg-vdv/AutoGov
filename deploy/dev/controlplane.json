@@ -1,0 +1,14 @@
+{
+  "listen": ":8443",
+  "data_dir": "/var/lib/autogov/data",
+  "mode": "onprem",
+  "allow_external_egress": false,
+  "agent_tokens": ["dev-agent-token"],
+  "api_tokens": {
+    "dev-admin": "admin",
+    "dev-analyst": "analyst",
+    "dev-viewer": "viewer"
+  },
+  "vuln_feed": "/etc/autogov/vuln-feed.json",
+  "notify": { "min_severity": "low" }
+}

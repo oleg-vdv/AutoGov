@@ -1,0 +1,48 @@
+# Demo / pilot stack (ТЗ §10, §12): control plane + agent + an intentionally
+# "shadow" n8n instance to exercise M1 discovery end to end.
+#
+# WARNING: dev defaults only. For a real pilot: enable TLS/mTLS, replace all
+# tokens, and keep mode=onprem (default) for RK clients (ТЗ §8.4).
+services:
+  controlplane:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.controlplane
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./dev/controlplane.json:/etc/autogov/controlplane.json:ro
+      - ./dev/vuln-feed.json:/etc/autogov/vuln-feed.json:ro
+      - cp-data:/var/lib/autogov/data
+    restart: unless-stopped
+
+  # A deliberately unmanaged n8n instance — the "shadow automation" the
+  # product is meant to find (ТЗ §12 приёмка: тестовый периметр).
+  shadow-n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_ENCRYPTION_KEY=demo-do-not-use-in-prod
+      - DB_TYPE=sqlite
+      - N8N_SECURE_COOKIE=false
+    ports:
+      - "5678:5678"
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.agent
+    volumes:
+      - ./dev/agent.json:/etc/autogov/agent.json:ro
+      # Read-only Docker socket: inspection only, never control (ТЗ §9).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - agent-spool:/var/lib/autogov-agent/spool
+    # Agent must reach the demo n8n and the control plane by service name.
+    depends_on:
+      - controlplane
+      - shadow-n8n
+    restart: unless-stopped
+
+volumes:
+  cp-data:
+  agent-spool:

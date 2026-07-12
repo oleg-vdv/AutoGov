@@ -1,0 +1,19 @@
+{
+  "agent_id": "",
+  "control_plane_url": "https://controlplane.internal:8443",
+  "token": "CHANGE-ME-agent-token",
+  "interval_seconds": 300,
+  "spool_dir": "/var/lib/autogov-agent/spool",
+  "docker_socket": "/var/run/docker.sock",
+  "scan_roots": ["/opt", "/srv"],
+  "net_targets": ["127.0.0.1:5678"],
+  "labels": { "site": "hq", "segment": "workstations" },
+  "n8n_api_base": "",
+  "n8n_api_key": "",
+  "tls": {
+    "client_cert_file": "/etc/autogov/tls/agent.crt",
+    "client_key_file": "/etc/autogov/tls/agent.key",
+    "ca_file": "/etc/autogov/tls/ca.crt",
+    "insecure_skip_verify": false
+  }
+}
