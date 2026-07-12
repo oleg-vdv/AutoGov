@@ -15,5 +15,10 @@
     "client_key_file": "/etc/autogov/tls/agent.key",
     "ca_file": "/etc/autogov/tls/ca.crt",
     "insecure_skip_verify": false
+  },
+  "release": {
+    "manifest_path": "/etc/autogov/manifest.json",
+    "public_key": "PUT-HEX-ED25519-RELEASE-PUBLIC-KEY-HERE",
+    "enforce": true
   }
 }

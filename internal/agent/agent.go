@@ -47,6 +47,15 @@ type Config struct {
 		CAFile         string `json:"ca_file"`
 		Insecure       bool   `json:"insecure_skip_verify"` // dev only
 	} `json:"tls"`
+
+	// Release integrity verification (ТЗ §9 «Подписанные артефакты»). When
+	// set, the agent verifies its own binary against a signed manifest at
+	// startup and refuses to run if tampered (Enforce=true).
+	Release struct {
+		ManifestPath string `json:"manifest_path"`
+		PublicKey    string `json:"public_key"` // hex ed25519 public key
+		Enforce      bool   `json:"enforce"`    // true = refuse to start on failure
+	} `json:"release"`
 }
 
 // Agent runs collectors on a schedule and ships observations.
@@ -82,6 +91,11 @@ func New(cfg Config, logger *slog.Logger) (*Agent, error) {
 
 	client, err := buildClient(cfg)
 	if err != nil {
+		return nil, err
+	}
+
+	// Verify release integrity before doing any privileged collection (§9).
+	if err := verifyRelease(cfg, logger); err != nil {
 		return nil, err
 	}
 
