@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -40,68 +40,133 @@ input{background:var(--bg);color:var(--text);border:1px solid var(--border);bord
 .err{color:var(--crit);margin-top:8px}
 a{color:var(--accent)}
 .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.lang{font-size:11px;opacity:.85}
 </style>
 </head>
 <body>
 <div id="login">
   <h1>AutoGov Control Plane</h1>
-  <p class="sub">Governance-платформа для self-hosted автоматизаций</p>
-  <input id="token" type="password" placeholder="API-токен (роль viewer/analyst/admin)">
-  <button class="primary" onclick="login()">Войти</button>
+  <p class="sub" data-i18n="tagline_full">Governance platform for self-hosted automations</p>
+  <input id="token" type="password" data-i18n-ph="token_ph" placeholder="API token (viewer / analyst / admin)">
+  <button class="primary" onclick="login()" data-i18n="login">Sign in</button>
   <div id="loginerr" class="err"></div>
+  <p style="margin-top:16px"><button class="lang" onclick="toggleLang()" id="langbtn">RU</button></p>
 </div>
 
 <div id="app" style="display:none">
   <div class="topbar">
     <div>
-      <h1>AutoGov — теневые автоматизации</h1>
-      <p class="sub">найти → задокументировать → защитить → чинить</p>
+      <h1 data-i18n="app_title">AutoGov — shadow automation</h1>
+      <p class="sub" data-i18n="tagline">find → document → protect → heal</p>
     </div>
     <div class="row">
-      <button onclick="exportReport('json')">Отчёт JSON</button>
+      <button class="lang" onclick="toggleLang()" id="langbtn2">RU</button>
+      <button onclick="exportReport('json')" data-i18n="report_json">Report JSON</button>
       <button onclick="exportReport('csv')">CSV</button>
       <button onclick="exportReport('pdf')">PDF</button>
-      <button onclick="logout()">Выйти</button>
+      <button onclick="logout()" data-i18n="logout">Sign out</button>
     </div>
   </div>
 
   <div class="cards" id="cards"></div>
 
-  <h2>Находки (риск-скоринг)</h2>
+  <h2 data-i18n="h_findings">Findings (risk scoring)</h2>
   <div class="tablewrap"><table id="findings">
-    <thead><tr><th>Риск</th><th>Скор</th><th>Находка</th><th>Статус</th><th>Действия</th></tr></thead>
+    <thead><tr>
+      <th data-i18n="c_risk">Risk</th><th data-i18n="c_score">Score</th>
+      <th data-i18n="c_finding">Finding</th><th data-i18n="c_status">Status</th>
+      <th data-i18n="c_actions">Actions</th>
+    </tr></thead>
     <tbody></tbody>
   </table></div>
 
-  <h2>Инстансы автоматизаций</h2>
+  <h2 data-i18n="h_instances">Automation instances</h2>
   <div class="tablewrap"><table id="instances">
-    <thead><tr><th>Движок</th><th>Идентификация</th><th>Запуск</th><th>Доступность</th><th>Версия</th><th>Обнаружен</th><th>Сигналы</th><th>WL</th></tr></thead>
+    <thead><tr>
+      <th data-i18n="c_engine">Engine</th><th data-i18n="c_identity">Identity</th>
+      <th data-i18n="c_run">Run mode</th><th data-i18n="c_exposure">Exposure</th>
+      <th data-i18n="c_version">Version</th><th data-i18n="c_seen">First seen</th>
+      <th data-i18n="c_signals">Signals</th><th>WL</th>
+    </tr></thead>
     <tbody></tbody>
   </table></div>
 
-  <h2>Карта доступа: инстанс → целевые системы</h2>
+  <h2 data-i18n="h_reach">Access map: instance → target systems</h2>
   <div class="tablewrap"><table id="reach">
-    <thead><tr><th>Инстанс</th><th>Целевая система</th><th>Категория</th><th>Через</th></tr></thead>
+    <thead><tr>
+      <th data-i18n="c_instance">Instance</th><th data-i18n="c_target">Target system</th>
+      <th data-i18n="c_category">Category</th><th data-i18n="c_via">Via</th>
+    </tr></thead>
     <tbody></tbody>
   </table></div>
 
-  <h2>Хосты-сенсоры</h2>
+  <h2 data-i18n="h_hosts">Sensor hosts</h2>
   <div class="tablewrap"><table id="hosts">
-    <thead><tr><th>Хост</th><th>ОС</th><th>IP</th><th>Агент</th><th>Последний контакт</th></tr></thead>
+    <thead><tr>
+      <th data-i18n="c_host">Host</th><th>OS</th><th>IP</th>
+      <th data-i18n="c_agent">Agent</th><th data-i18n="c_contact">Last contact</th>
+    </tr></thead>
     <tbody></tbody>
   </table></div>
 </div>
 
 <script>
+const I18N = {
+  en: {
+    tagline_full:"Governance platform for self-hosted automations", token_ph:"API token (viewer / analyst / admin)",
+    login:"Sign in", logout:"Sign out", app_title:"AutoGov — shadow automation", tagline:"find → document → protect → heal",
+    report_json:"Report JSON", h_findings:"Findings (risk scoring)", h_instances:"Automation instances",
+    h_reach:"Access map: instance → target systems", h_hosts:"Sensor hosts",
+    c_risk:"Risk", c_score:"Score", c_finding:"Finding", c_status:"Status", c_actions:"Actions",
+    c_engine:"Engine", c_identity:"Identity", c_run:"Run mode", c_exposure:"Exposure", c_version:"Version",
+    c_seen:"First seen", c_signals:"Signals", c_instance:"Instance", c_target:"Target system",
+    c_category:"Category", c_via:"Via", c_host:"Host", c_agent:"Agent", c_contact:"Last contact",
+    badauth:"Invalid token or server unreachable", ack:"Acknowledge", resolve:"Resolve", reopen:"Reopen",
+    towl:"Whitelist", wl_prompt:"Reason for whitelisting (IT-sanctioned):", need_admin:"Admin role required",
+    exp_admin:"Export requires the admin role", reach_role:"Access map is available to analyst/admin roles",
+    reach_empty:"No access edges yet", no_findings:"No findings yet — agents haven't reported observations",
+    no_instances:"No instances discovered", no_hosts:"No agents connected", wl_yes:"yes",
+    exposure:{localhost:"localhost only",lan:"LAN",public:"PUBLIC",unknown:"—"},
+    cards:["Hosts","Instances","Shadow","New 24h","Critical","High"]
+  },
+  ru: {
+    tagline_full:"Governance-платформа для self-hosted-автоматизаций", token_ph:"API-токен (viewer / analyst / admin)",
+    login:"Войти", logout:"Выйти", app_title:"AutoGov — теневые автоматизации", tagline:"найти → задокументировать → защитить → чинить",
+    report_json:"Отчёт JSON", h_findings:"Находки (риск-скоринг)", h_instances:"Инстансы автоматизаций",
+    h_reach:"Карта доступа: инстанс → целевые системы", h_hosts:"Хосты-сенсоры",
+    c_risk:"Риск", c_score:"Скор", c_finding:"Находка", c_status:"Статус", c_actions:"Действия",
+    c_engine:"Движок", c_identity:"Идентификация", c_run:"Запуск", c_exposure:"Доступность", c_version:"Версия",
+    c_seen:"Обнаружен", c_signals:"Сигналы", c_instance:"Инстанс", c_target:"Целевая система",
+    c_category:"Категория", c_via:"Через", c_host:"Хост", c_agent:"Агент", c_contact:"Последний контакт",
+    badauth:"Неверный токен или сервер недоступен", ack:"Принять", resolve:"Решено", reopen:"Reopen",
+    towl:"В белый список", wl_prompt:"Причина добавления в белый список (санкционировано ИТ):", need_admin:"Требуется роль admin",
+    exp_admin:"Экспорт доступен роли admin", reach_role:"Карта доступа доступна ролям analyst/admin",
+    reach_empty:"Рёбра доступа пока не построены", no_findings:"Находок пока нет — агенты ещё не прислали наблюдения",
+    no_instances:"Инстансы не обнаружены", no_hosts:"Агенты не подключены", wl_yes:"да",
+    exposure:{localhost:"только localhost",lan:"LAN",public:"ПУБЛИЧНЫЙ",unknown:"—"},
+    cards:["Хостов","Инстансов","Теневых","Новых 24ч","Critical","High"]
+  }
+};
+let LANG = localStorage.getItem('autogov_lang') || 'en';
+const T = () => I18N[LANG];
 let TOKEN = sessionStorage.getItem('autogov_token') || '';
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el => { const v=T()[el.dataset.i18n]; if(v) el.textContent=v; });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { const v=T()[el.dataset.i18nPh]; if(v) el.placeholder=v; });
+  const other = LANG==='en' ? 'RU' : 'EN';
+  const b1=$('#langbtn'), b2=$('#langbtn2'); if(b1)b1.textContent=other; if(b2)b2.textContent=other;
+  document.documentElement.lang = LANG;
+}
+function toggleLang(){ LANG = LANG==='en'?'ru':'en'; localStorage.setItem('autogov_lang',LANG); applyI18n(); if($('#app').style.display==='block') refresh(); }
 
 async function api(path, opts = {}) {
   opts.headers = Object.assign({'Authorization': 'Bearer ' + TOKEN}, opts.headers);
   const r = await fetch(path, opts);
   if (r.status === 401) { logout(); throw new Error('unauthorized'); }
-  if (r.status === 403) return null; // role too low for this endpoint — hide section
+  if (r.status === 403) return null;
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
@@ -112,14 +177,12 @@ async function login() {
     await api('/api/v1/summary');
     sessionStorage.setItem('autogov_token', TOKEN);
     show();
-  } catch (e) { $('#loginerr').textContent = 'Неверный токен или сервер недоступен'; }
+  } catch (e) { $('#loginerr').textContent = T().badauth; }
 }
 function logout(){ sessionStorage.removeItem('autogov_token'); location.reload(); }
-
-function show(){ $('#login').style.display='none'; $('#app').style.display='block'; refresh(); setInterval(refresh, 15000); }
+function show(){ $('#login').style.display='none'; $('#app').style.display='block'; applyI18n(); refresh(); setInterval(refresh, 15000); }
 
 const badge = s => `<span class="badge b-${esc(s)}">${esc(s)}</span>`;
-const expoRu = {localhost:'только localhost', lan:'LAN', public:'ПУБЛИЧНЫЙ', unknown:'—'};
 
 async function refresh() {
   const [sum, findings, instances, hosts, reach] = await Promise.all([
@@ -127,71 +190,71 @@ async function refresh() {
     api('/api/v1/hosts'), api('/api/v1/reachability')
   ]);
   const bs = sum.findings_by_severity || {};
+  const labels = T().cards;
   $('#cards').innerHTML = [
-    ['Хостов', sum.hosts], ['Инстансов', sum.instances],
-    ['Теневых', sum.shadow_instances], ['Новых за 24ч', sum.instances_new_last_24h],
-    ['Critical', bs.critical||0, 'crit'], ['High', bs.high||0, 'high']
+    [labels[0], sum.hosts], [labels[1], sum.instances],
+    [labels[2], sum.shadow_instances], [labels[3], sum.instances_new_last_24h],
+    [labels[4], bs.critical||0, 'crit'], [labels[5], bs.high||0, 'high']
   ].map(([l,n,c]) => `<div class="card"><div class="n" ${c?`style="color:var(--${c})"`:''}>${n}</div><div class="l">${l}</div></div>`).join('');
 
   const instById = {};
   (instances||[]).forEach(i => instById[i.id] = i);
+  const expl = f => LANG==='en' ? (f.explanation_en || f.explanation) : f.explanation;
+  const title = f => LANG==='en' ? (f.title_en || f.title) : f.title;
 
   $('#findings tbody').innerHTML = (findings||[]).map(f => `
     <tr>
       <td>${badge(f.severity)}</td>
       <td><b>${f.score}</b></td>
-      <td>${esc(f.title)}<div class="expl">${esc(f.explanation)}</div></td>
+      <td>${esc(title(f))}<div class="expl">${esc(expl(f))}</div></td>
       <td>${f.status==='whitelisted'?'<span class="badge b-ok">whitelisted</span>':esc(f.status)}</td>
       <td class="row">
-        ${f.status==='new'?`<button onclick="act('${f.id}','ack')">Принять</button>`:''}
-        ${f.status!=='resolved'?`<button onclick="act('${f.id}','resolve')">Решено</button>`:`<button onclick="act('${f.id}','reopen')">Reopen</button>`}
-        ${instById[f.instance_id] && !instById[f.instance_id].whitelisted ? `<button onclick="whitelist('${f.instance_id}')">В белый список</button>`:''}
+        ${f.status==='new'?`<button onclick="act('${f.id}','ack')">${T().ack}</button>`:''}
+        ${f.status!=='resolved'?`<button onclick="act('${f.id}','resolve')">${T().resolve}</button>`:`<button onclick="act('${f.id}','reopen')">${T().reopen}</button>`}
+        ${instById[f.instance_id] && !instById[f.instance_id].whitelisted ? `<button onclick="whitelist('${f.instance_id}')">${T().towl}</button>`:''}
       </td>
-    </tr>`).join('') || '<tr><td colspan="5" class="expl">Находок пока нет — агенты ещё не прислали наблюдения</td></tr>';
+    </tr>`).join('') || `<tr><td colspan="5" class="expl">${T().no_findings}</td></tr>`;
 
   $('#instances tbody').innerHTML = (instances||[]).map(i => `
     <tr>
       <td><b>${esc(i.engine)}</b></td>
       <td class="mono">${esc(i.identity)}</td>
       <td>${esc(i.run_mode||'—')}</td>
-      <td>${i.exposure==='public'?'<span class="badge b-critical">public</span>':esc(expoRu[i.exposure]||i.exposure)}</td>
+      <td>${i.exposure==='public'?'<span class="badge b-critical">public</span>':esc(T().exposure[i.exposure]||i.exposure)}</td>
       <td>${esc(i.version||'—')}</td>
       <td>${new Date(i.first_seen).toLocaleString()}</td>
       <td class="mono">${(i.detected_by||[]).map(esc).join(', ')} (${Math.round((i.confidence||0)*100)}%)</td>
-      <td>${i.whitelisted?'<span class="badge b-ok">да</span>':'—'}</td>
-    </tr>`).join('') || '<tr><td colspan="8" class="expl">Инстансы не обнаружены</td></tr>';
+      <td>${i.whitelisted?`<span class="badge b-ok">${T().wl_yes}</span>`:'—'}</td>
+    </tr>`).join('') || `<tr><td colspan="8" class="expl">${T().no_instances}</td></tr>`;
 
   const reachRows = (reach||[]).map(r => `
     <tr><td class="mono">${esc((instById[r.instance_id]||{}).identity || r.instance_id)}</td>
     <td>${esc(r.target_system)}</td><td>${badge(r.target_category==='payments'||r.target_category==='erp_1c'?'critical':'medium')} ${esc(r.target_category)}</td>
     <td>${esc(r.via)}</td></tr>`).join('');
   $('#reach tbody').innerHTML = reachRows ||
-    `<tr><td colspan="4" class="expl">${reach===null?'Карта доступа доступна ролям analyst/admin':'Рёбра доступа пока не построены'}</td></tr>`;
+    `<tr><td colspan="4" class="expl">${reach===null?T().reach_role:T().reach_empty}</td></tr>`;
 
   $('#hosts tbody').innerHTML = (hosts||[]).map(h => `
     <tr><td><b>${esc(h.hostname)}</b></td><td>${esc(h.os)}</td>
     <td class="mono">${(h.ips||[]).map(esc).join(', ')}</td>
     <td class="mono">${esc(h.agent_id||'')} v${esc(h.agent_version||'?')}</td>
-    <td>${new Date(h.last_seen).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="5" class="expl">Агенты не подключены</td></tr>';
+    <td>${new Date(h.last_seen).toLocaleString()}</td></tr>`).join('') || `<tr><td colspan="5" class="expl">${T().no_hosts}</td></tr>`;
 }
 
-async function act(id, action) {
-  await api(`/api/v1/findings/${id}/${action}`, {method:'POST'});
-  refresh();
-}
+async function act(id, action) { await api(`/api/v1/findings/${id}/${action}`, {method:'POST'}); refresh(); }
 
 async function whitelist(instanceId) {
-  const reason = prompt('Причина добавления в белый список (санкционировано ИТ):');
+  const reason = prompt(T().wl_prompt);
   if (!reason) return;
   const res = await api('/api/v1/whitelist', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({kind:'instance', pattern:instanceId, reason})});
-  if (res === null) alert('Требуется роль admin');
+  if (res === null) alert(T().need_admin);
   refresh();
 }
 
 async function exportReport(fmt) {
   const r = await fetch('/api/v1/reports/export?format=' + fmt, {headers:{'Authorization':'Bearer '+TOKEN}});
-  if (r.status === 403) { alert('Экспорт доступен роли admin'); return; }
+  if (r.status === 403) { alert(T().exp_admin); return; }
   const blob = await r.blob();
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -199,6 +262,7 @@ async function exportReport(fmt) {
   a.click();
 }
 
+applyI18n();
 if (TOKEN) { api('/api/v1/summary').then(show).catch(()=>{}); }
 </script>
 </body>

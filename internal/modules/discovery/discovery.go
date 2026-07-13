@@ -431,6 +431,7 @@ func (m *Module) rescore(api *modules.API, instanceID string) {
 		InstanceID:    inst.ID,
 		HostID:        inst.HostID,
 		Title:         fmt.Sprintf("Теневой инстанс %s: %s", inst.Engine, inst.Identity),
+		TitleEN:       fmt.Sprintf("Shadow %s instance: %s", inst.Engine, inst.Identity),
 		Score:         res.Score,
 		Severity:      res.Severity,
 		Factors:       res.Factors,

@@ -49,6 +49,7 @@ func (m *Module) Handle(_ context.Context, ev model.Event, api *modules.API) err
 		InstanceID: a.InstanceID,
 		HostID:     ev.HostID,
 		Title:      fmt.Sprintf("Обращение к приманке %s (%s) — вероятная компрометация", a.HoneyID, a.Kind),
+		TitleEN:    fmt.Sprintf("Honey object %s (%s) accessed — probable compromise", a.HoneyID, a.Kind),
 		Score:      95,
 		Severity:   model.SeverityCritical,
 		Explanation: fmt.Sprintf(

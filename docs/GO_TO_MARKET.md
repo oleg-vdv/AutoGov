@@ -1,154 +1,153 @@
-# AutoGov — стратегия вывода на рынок (Go-to-Market)
+# AutoGov — Go-to-Market Strategy
 
-Документ для основателя/продавца: кому продавать, как объяснять ценность, как
-упаковать и по какой модели монетизировать. Основан на бизнес-логике ТЗ
-(§1, §11, §13) и рыночном контексте идеи.
+*English · [Русская версия](GO_TO_MARKET.ru.md)*
 
----
-
-## 1. Проблема одним предложением
-
-> Сотрудники поднимают n8n в Docker на ноутбуках и серверах, зашивают туда
-> боевые доступы к 1С/CRM/БД и запускают автоматизации **без ведома ИБ**.
-> Для службы безопасности это невидимая точка утечки с прямым доступом к
-> продакшену. Существующие Shadow-IT-инструменты видят SaaS/OAuth, но **не
-> видят локально развёрнутые автоматизации**.
-
-AutoGov — «control plane для теневой автоматизации»: **найти → задокументировать
-→ защитить → чинить**. MVP закрывает первый и самый наглядный шаг — **найти**.
+For the founder/seller: who to sell to, how to frame value, how to package, and
+how to monetize.
 
 ---
 
-## 2. Почему сейчас (timing)
+## 1. The problem in one sentence
 
-- Бум self-hosted n8n: 230 000+ активных пользователей, оценка ~$1,5 млрд
-  (сер. 2025), кратный рост mid-market именно в self-hosted-сегменте.
-- Каждый self-hosted инстанс — потенциальный неучтённый доступ к продакшену.
-- **Специализированного вендора governance для self-hosted n8n на рынке нет** —
-  окно открыто, но крупные EDR/CNAPP (CrowdStrike, Wiz, Microsoft) могут войти.
-  Отсюда — скорость + защитный ров через локализацию под КЗ/СНГ.
+> Employees stand up self-hosted n8n in Docker on laptops and servers, wire in
+> live credentials to 1C / CRM / databases / payment APIs, and run workflows
+> **without security's knowledge**. For the security team this is an invisible
+> leak point with direct production access. Existing Shadow-IT tools see
+> SaaS/OAuth — they **do not see locally-deployed automations**.
+
+AutoGov is the control plane for shadow automation: **find → document → protect
+→ heal**. The MVP nails the first, most tangible step — **find**.
 
 ---
 
-## 3. Кому продавать (ICP — Ideal Customer Profile)
+## 2. Why now
 
-**Первичный ICP:** компании 200–5000 сотрудников, где ИБ/ИТ уже осознали, что
-«у нас где-то крутятся автоматизации, но мы не знаем где».
+- Self-hosted n8n boom: 230,000+ active users, ~$1.5B valuation (mid-2025),
+  multiple-x growth of mid-market in the self-hosted segment.
+- Every self-hosted instance is potential unmanaged production access.
+- **No specialized governance vendor for self-hosted n8n exists** — the window
+  is open, but large EDR/CNAPP vendors (CrowdStrike, Wiz, Microsoft) could
+  enter. Hence: speed + a defensive moat via CIS/KZ localization.
 
-| Сегмент | Почему покупает | Кто ЛПР |
+---
+
+## 3. Ideal Customer Profile
+
+Companies of 200–5,000 employees whose security/IT already suspect “we have
+automations running somewhere and don't know where.”
+
+| Segment | Why they buy | Decision-maker |
 |---|---|---|
-| **Банки / финтех КЗ/СНГ** | Регуляторное давление (локализация ПДн), доступ автоматизаций к платёжным системам | CISO, Head of SOC |
-| **Госсектор / квазигос** | Требование внутристранового хранения, аудит | ИБ-департамент |
-| **Ритейл / e-com с 1С** | n8n-интеграции с 1С/CRM/платежами = прямой доступ к деньгам и ПДн | ИТ-директор, CISO |
-| **MSP / аутсорс-SOC** | Продают мониторинг клиентам, AutoGov — новая услуга в портфеле | Технический директор |
+| **Banks / fintech (KZ/CIS)** | Regulatory pressure (data localization), automations touching payment systems | CISO, Head of SOC |
+| **Public sector / quasi-gov** | In-country storage requirement, audit | Security department |
+| **Retail / e-com on 1C** | n8n integrations with 1C/CRM/payments = direct access to money and PII | IT Director, CISO |
+| **MSP / outsourced SOC** | They sell monitoring; AutoGov is a new service line | Technical Director |
 
-**Не-ICP на старте:** стартапы <50 чел (нет боли/бюджета), компании без
-self-hosted-автоматизаций.
-
----
-
-## 4. Ценностное предложение по ролям
-
-- **CISO:** «Вы получаете карту: какой неучтённый инстанс имеет доступ к каким
-  продакшн-системам, с риск-приоритизацией. Это ваш главный слепой пятно
-  прямо сейчас.»
-- **Head of SOC:** «Находки прилетают в Wazuh/Splunk через CEF из коробки —
-  ещё один источник в вашем SIEM, без интеграционного проекта.»
-- **ИТ-директор:** «Лёгкий агент, read-only, open-source — можно аудировать.
-  Не расширяет поверхность атаки (только исходящие соединения).»
-- **DPO / комплаенс (КЗ):** «On-prem, никакого вывоза данных за периметр,
-  значения секретов и ПДн не покидают хост — соответствие Закону № 94-V.»
+Non-ICP at launch: <50-person startups (no pain/budget), companies without
+self-hosted automations.
 
 ---
 
-## 5. Отстройка от конкурентов
+## 4. Value proposition by role
 
-| Кто | Что делает | Чего НЕ делает (наша ниша) |
+- **CISO:** “You get a map of which unmanaged instance can reach which
+  production system, prioritized by risk. This is your biggest blind spot right
+  now.”
+- **Head of SOC:** “Findings arrive in Wazuh/Splunk via CEF out of the box — one
+  more source in your SIEM, no integration project.”
+- **IT Director:** “Lightweight agent, read-only, open-source — auditable. It
+  doesn't widen the attack surface (outbound-only).”
+- **DPO / compliance (KZ):** “On-prem, no data leaves the perimeter, secret
+  values and PII never leave the host — compliant with Law No. 94-V.”
+
+---
+
+## 5. Differentiation
+
+| Who | What they do | What they DON'T (our niche) |
 |---|---|---|
-| MS Defender for Cloud Apps, Nudge, Auvik | Находят SaaS/OAuth | Не видят локальные `localhost:5678` инстансы |
-| EDR (CrowdStrike и др.) | Инвентарь процессов | Не строят **маппинг доступа автоматизаций** к системам |
-| CNAPP (Wiz) | Облачная конфигурация | Не про теневые on-prem автоматизации |
+| Defender for Cloud Apps, Nudge, Auvik | Find SaaS/OAuth | Don't see local `localhost:5678` instances |
+| EDR (CrowdStrike, etc.) | Process inventory | Don't map **automation access** to systems |
+| CNAPP (Wiz) | Cloud config | Not about shadow on-prem automations |
 
-**Два защитных рва:**
-1. **Глубина по автоматизациям** — не просто «нашли процесс n8n», а «этот
-   инстанс имеет креды к Kaspi Pay и 1С, доступен из LAN, владелец — бухгалтер».
-2. **Локализация КЗ/СНГ** — on-prem, БИН/ИИН-контекст, соответствие локальным
-   законам. Глобальные игроки это не покрывают.
+**Two moats:**
+1. **Depth on automations** — not “found an n8n process”, but “this instance has
+   credentials to Kaspi Pay and 1C, reachable from the LAN, owner is an
+   accountant.”
+2. **KZ/CIS localization** — on-prem, in-country data, compliance with local
+   law. Global players don't cover this.
 
-**Пороги «менять стратегию» (из ТЗ §13):** если n8n Inc./Wiz/Palo Alto
-выпустят нативный «local automation discovery» — уходить в более узкую вертикаль
-или углублять КЗ-локализацию.
+**Strategy-change thresholds:** if n8n Inc./Wiz/Palo Alto ship a native “local
+automation discovery,” move to a narrower vertical or double down on KZ
+localization.
 
 ---
 
-## 6. Модель монетизации: open-core
+## 6. Monetization: open-core
 
-Рекомендация ТЗ §14 — **open-core**:
+- **Open-source (free):** the agent sensor. Removes the trust barrier (“you want
+  us to install an agent with Docker-socket access — show us the code”). Drives
+  distribution and community trust.
+- **Paid (control plane + modules):**
 
-- **Open-source (бесплатно):** агент-сенсор. Снимает барьер доверия («ставим
-  агент с доступом к Docker-сокету — покажите код»). Драйвит распространение и
-  community-доверие.
-- **Платно (control plane + модули):**
-
-| Тариф | Для кого | Что входит | Ориентир цены* |
+| Tier | For | Includes | Price anchor* |
 |---|---|---|---|
-| **Community** | энтузиасты, оценка | агент + базовый self-hosted control plane, 1 хост | $0 |
-| **Team** | SMB | до N хостов, дашборд, отчёты, SIEM-интеграция | подписка / хост / мес |
-| **Enterprise** | банки/гос | on-prem, RBAC, аудит, подпись, SLA, приоритетная поддержка | годовой контракт |
-| **Managed / SOC** | через MSP | мультитенант, white-label | rev-share |
+| **Community** | evaluators | agent + basic self-hosted control plane, 1 host | $0 |
+| **Team** | SMB | up to N hosts, dashboard, reports, SIEM integration | subscription / host / mo |
+| **Enterprise** | banks/gov | on-prem, RBAC, audit, signing, SLA, priority support | annual contract |
+| **Managed / SOC** | via MSP | multi-tenant, white-label | rev-share |
 
-\* Конкретные цифры — после 15–20 проблемных интервью (см. §8). Якорь ценности:
-цена < стоимости **одного** инцидента утечки через теневой инстанс.
+\* Set real numbers after 15–20 problem interviews. Anchor value below the cost
+of a **single** breach through a shadow instance.
 
-Апселл (ТЗ §11): после того как клиент увидел ценность «найти» (M1), продавать
-модули **M2 HoneyNodes → M3 Self-healing → M4 Autodoc** тем же клиентам.
-
----
-
-## 7. Воронка и материалы
-
-1. **Лид-магнит:** open-source агент + бесплатный «Shadow Automation Scan» —
-   разовый отчёт «сколько теневых n8n у вас и к чему у них доступ». Это WOW-момент.
-2. **Демо:** `docker compose up` за 2 минуты показывает найденный «теневой» n8n
-   с картой доступа — продаёт само себя.
-3. **Пилот (PoC):** 2–4 недели на реальном периметре клиента, критерии успеха
-   из ТЗ §12 (≥95% обнаружения, ≤5% ложных). Пилот → контракт.
-4. **Контент:** статьи «Мы просканировали N компаний и нашли X теневых
-   инстансов с доступом к платежам» — цифры продают в ИБ-сообществе.
+Up-sell: once a customer sees the value of “find” (M1), sell modules **M2
+HoneyNodes → M3 Self-healing → M4 Autodoc** to the same accounts.
 
 ---
 
-## 8. План первых 90 дней (валидация, ТЗ §11 Этап 1)
+## 7. Funnel and assets
 
-- [ ] 15–20 проблемных интервью с DevOps/ИБ в КЗ/СНГ. Вопрос: «Знаете ли вы
-      обо всех автоматизациях в инфраструктуре? Что будет, если бухгалтер
-      поднял n8n с доступом к 1С?»
-- [ ] Критерий продолжения: ≥30% отвечают «острая боль». Иначе (ТЗ §13 порог б)
-      — сместиться в локализационные идеи с регуляторным рвом (Compliance-copilot
-      по локализации ПДн, AI-gateway для 1С).
-- [ ] 1 пилотный клиент из банковского/ИБ-сегмента КЗ.
-- [ ] Опубликовать open-source агент, собрать первые звёзды/фидбек на GitHub.
-- [ ] Прогнать 3–5 бесплатных сканов → кейсы с цифрами.
+1. **Lead magnet:** open-source agent + a free “Shadow Automation Scan” — a
+   one-off report of “how many shadow n8n instances you have and what they can
+   reach.” This is the WOW moment.
+2. **Demo:** `docker compose up` shows a discovered shadow n8n with its access
+   map in 2 minutes — it sells itself.
+3. **Pilot (PoC):** 2–4 weeks on the customer's real perimeter; success criteria
+   from spec §12 (≥95% detection, ≤5% false positives). Pilot → contract.
+4. **Content:** “We scanned N companies and found X shadow instances with access
+   to payment systems” — numbers sell in the security community.
 
 ---
 
-## 9. Риски и как отвечать на возражения
+## 8. First 90 days (validation)
 
-| Возражение | Ответ |
+- [ ] 15–20 problem interviews with DevOps/security in KZ/CIS. Ask: “Do you know
+      about every automation in your infrastructure? What happens if an
+      accountant stood up n8n with access to 1C?”
+- [ ] Go/no-go: ≥30% report “acute pain.” Otherwise pivot to localization ideas
+      with a regulatory moat.
+- [ ] 1 pilot customer from the banking/security segment.
+- [ ] Publish the open-source agent; collect first GitHub stars/feedback.
+- [ ] Run 3–5 free scans → case studies with numbers.
+
+---
+
+## 9. Objection handling
+
+| Objection | Answer |
 |---|---|
-| «Ставить агент с доступом к Docker-сокету страшно» | Open-source (аудируйте), read-only по умолчанию, подпись артефактов, только исходящие соединения |
-| «У нас нет теневых автоматизаций» | Предложить бесплатный скан — почти всегда находит; это и есть демонстрация |
-| «Это добавит CrowdStrike/Wiz» | Возможно, но не с глубиной маппинга доступа и не с КЗ-локализацией; вы нужны сейчас |
-| «Дорого» | Цена одного инцидента утечки через теневой инстанс кратно выше подписки |
-| Лицензия n8n (SUL) | Мы инспектируем ваши уже развёрнутые инстансы, а не хостим n8n — под ограничения SUL не подпадаем |
+| “Installing an agent with Docker-socket access is scary” | Open-source (audit it), read-only by default, signed artifacts, outbound-only |
+| “We have no shadow automations” | Offer a free scan — it almost always finds some; that's the demo |
+| “CrowdStrike/Wiz will add this” | Maybe, but not with access-mapping depth or KZ localization; you need it now |
+| “Too expensive” | The cost of one breach through a shadow instance dwarfs the subscription |
+| n8n license (SUL) | We inspect your already-deployed instances, we don't host n8n — not subject to SUL hosting limits |
 
 ---
 
-## 10. Что НЕ делать на старте
+## 10. What NOT to do at launch
 
-- Не строить сразу все 4 модуля (M1–M4) — распылит фокус (ТЗ §1.3). Продавать
-  после M1.
-- Не идти в венчур с deep-tech-идеями (трассировка металлов и пр.) — это другой
-  бизнес; здесь — грант/партнёрство, длинный цикл (ТЗ §11 Этап 3).
-- Не обещать «автоматическое реагирование/блокировку» в MVP — только
-  обнаружение и оповещение (активные действия = отдельная фаза с рисками, §3.2).
+- Don't build all four modules (M1–M4) at once — it dilutes focus. Sell after M1.
+- Don't chase deep-tech ideas via VC; those are a different business (grant/
+  partnership, long cycle).
+- Don't promise automatic response/blocking in the MVP — detection and alerting
+  only (active actions are a separate phase with separate risks).

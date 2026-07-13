@@ -135,6 +135,7 @@ type Finding struct {
 	InstanceID string       `json:"instance_id,omitempty"`
 	HostID     string       `json:"host_id,omitempty"`
 	Title      string       `json:"title"`
+	TitleEN    string       `json:"title_en,omitempty"`
 	Score      float64      `json:"score"`
 	Severity   Severity     `json:"severity"`
 	Factors    []RiskFactor `json:"factors,omitempty"`

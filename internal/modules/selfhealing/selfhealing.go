@@ -45,6 +45,7 @@ func (m *Module) Handle(_ context.Context, ev model.Event, api *modules.API) err
 		InstanceID: e.InstanceID,
 		HostID:     ev.HostID,
 		Title:      fmt.Sprintf("Сбой воркфлоу «%s» (нода %s)", e.WorkflowName, e.Node),
+		TitleEN:    fmt.Sprintf("Workflow %q failed at node %q", e.WorkflowName, e.Node),
 		Score:      40,
 		Severity:   model.SeverityMedium,
 		Explanation: fmt.Sprintf(

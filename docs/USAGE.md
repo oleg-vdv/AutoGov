@@ -1,13 +1,15 @@
-# Руководство пользователя AutoGov
+# AutoGov — Usage Guide
 
-Пошагово: от «поднять за 2 минуты» до продакшн-развёртывания с TLS/mTLS и
-подписанными артефактами.
+*English · [Русская версия](USAGE.ru.md)*
+
+From “running in 2 minutes” to a production deployment with TLS/mTLS and signed
+artifacts.
 
 ---
 
-## 1. Быстрый старт (демо, ~2 минуты)
+## 1. Quick start (demo, ~2 min)
 
-Требуется Docker с плагином Compose.
+Requires Docker with the Compose plugin.
 
 ```bash
 git clone https://github.com/oleg-vdv/AutoGov.git
@@ -15,134 +17,122 @@ cd AutoGov/deploy
 docker compose up --build
 ```
 
-Что поднимется:
-- **controlplane** на `http://localhost:8443`;
-- **shadow-n8n** — намеренно «теневой» инстанс n8n (то, что продукт должен найти);
-- **agent** — сенсор, который через ~30 c обнаружит n8n и отправит находки.
+This brings up:
+- **controlplane** at `http://localhost:8443`;
+- **shadow-n8n** — an intentionally unmanaged n8n instance (what the product
+  should find);
+- **agent** — a sensor that discovers the n8n instance within ~30 s.
 
-Откройте `http://localhost:8443`, войдите токеном **`dev-admin`**. Увидите:
-инвентарь инстансов, находки с риск-скором и объяснением, карту доступа,
-кнопки экспорта отчётов.
+Open `http://localhost:8443`, sign in with token **`dev-admin`**. You'll see the
+instance inventory, risk-scored findings with explanations, the access map, and
+report-export buttons. The UI has an **EN/RU** toggle in the top bar.
 
-Демо-токены (dev): `dev-admin` (admin), `dev-analyst` (analyst),
-`dev-viewer` (viewer). Демо работает по HTTP — только для локальной проверки.
+Dev tokens: `dev-admin` (admin), `dev-analyst` (analyst), `dev-viewer` (viewer).
+The demo uses HTTP — local evaluation only.
 
 ---
 
-## 2. Запуск без Docker (сборка из исходников)
+## 2. Build from source
 
-Нужен Go 1.24+.
+Requires Go 1.24+.
 
 ```bash
 git clone https://github.com/oleg-vdv/AutoGov.git
 cd AutoGov
-make build           # → bin/agent, bin/controlplane, bin/autogov-sign
-make test            # прогнать тесты
+make build   # → bin/agent, bin/controlplane, bin/autogov-sign
+make test
 ```
 
 ### Control plane
 
 ```bash
 cp deploy/controlplane.example.json /etc/autogov/controlplane.json
-# отредактируйте токены и notify
+# edit tokens and notify targets
 ./bin/controlplane -config /etc/autogov/controlplane.json
 ```
 
-### Агент (на каждом защищаемом хосте)
+### Agent (on each protected host)
 
 ```bash
 cp deploy/agent.example.json /etc/autogov/agent.json
-# впишите control_plane_url и token
-./bin/agent -config /etc/autogov/agent.json          # как демон
-./bin/agent -config /etc/autogov/agent.json -once     # один проход, для проверки
+# set control_plane_url and token
+./bin/agent -config /etc/autogov/agent.json          # daemon
+./bin/agent -config /etc/autogov/agent.json -once     # single pass, for testing
 ```
 
 ---
 
-## 3. Конфигурация control plane
+## 3. Control plane configuration
 
 `controlplane.json`:
 
-| Поле | Смысл |
+| Field | Meaning |
 |---|---|
-| `listen` | адрес прослушивания, напр. `:8443` |
-| `data_dir` | каталог хранилища (snapshot + аудит-лог) |
-| `mode` | `onprem` (по умолчанию, внешний egress запрещён) или `saas` |
-| `allow_external_egress` | явное разрешение внешних адресатов в on-prem (трансграничная передача!) |
-| `tls.cert_file/key_file` | серверный TLS |
-| `tls.client_ca_file` | CA для **mTLS агентов** (если задан — `/ingest` требует клиентский сертификат) |
-| `agent_tokens` | список bearer-токенов для агентов |
-| `api_tokens` | карта `токен → роль` (`viewer`/`analyst`/`admin`) |
-| `vuln_feed` | путь к офлайн-фиду уязвимостей (JSON) |
-| `notify` | каналы оповещений (см. §6) |
-| `risk_weights` | (опц.) переопределение весов риск-скоринга |
+| `listen` | listen address, e.g. `:8443` |
+| `data_dir` | store location (snapshot + audit log) |
+| `mode` | `onprem` (default; external egress denied) or `saas` |
+| `allow_external_egress` | explicitly permit external destinations in on-prem (cross-border transfer!) |
+| `tls.cert_file/key_file` | server TLS |
+| `tls.client_ca_file` | CA for **agent mTLS** (if set, `/ingest` requires a client cert) |
+| `agent_tokens` | bearer tokens for agents |
+| `api_tokens` | map of `token → role` (`viewer`/`analyst`/`admin`) |
+| `vuln_feed` | path to an offline vulnerability feed (JSON) |
+| `notify` | notification channels (see §6) |
+| `risk_weights` | (optional) override the scoring weights |
 
-### Роли (RBAC)
+### Roles (RBAC)
 
-| Роль | Что видит/может |
+| Role | Access |
 |---|---|
-| `viewer` | сводка, инстансы, находки, хосты |
-| `analyst` | + карта доступа (чувствительно!), смена статуса находок, автодокументация |
-| `admin` | + whitelisting, экспорт отчётов, аудит-лог |
+| `viewer` | summary, instances, findings, hosts |
+| `analyst` | + access map (sensitive), change finding status, autodoc |
+| `admin` | + whitelisting, report export, audit log |
 
 ---
 
-## 4. Конфигурация агента
+## 4. Agent configuration
 
-`agent.json` — включайте только нужные коллекторы (принцип наименьших
-привилегий, ТЗ §9):
+`agent.json` — enable only the collectors you need (least privilege):
 
-| Поле | Смысл |
+| Field | Meaning |
 |---|---|
-| `control_plane_url` | адрес control plane (https в проде) |
-| `token` | agent-токен из `agent_tokens` |
-| `interval_seconds` | периодичность полного скана |
-| `docker_socket` | путь к сокету, или `"off"` чтобы отключить Docker-коллектор |
-| `scan_roots` | доп. каталоги для поиска `~/.n8n`/compose/`.env` |
-| `net_targets` | список `host:port` для сетевого фингерпринта |
-| `n8n_api_base` / `n8n_api_key` | (опц.) авторизованная инвентаризация воркфлоу через API (ключ даёт клиент-админ) |
-| `tls.*` | клиентский сертификат для mTLS, CA |
-| `release.*` | проверка подписи артефакта (см. §7) |
+| `control_plane_url` | control plane address (https in prod) |
+| `token` | agent token from `agent_tokens` |
+| `interval_seconds` | full-scan cadence |
+| `docker_socket` | socket path, or `"off"` to disable the Docker collector |
+| `scan_roots` | extra directories to search for `~/.n8n`/compose/`.env` |
+| `net_targets` | list of `host:port` to fingerprint |
+| `n8n_api_base` / `n8n_api_key` | (optional) authorized workflow inventory via API (admin-provided key) |
+| `tls.*` | client cert for mTLS, CA |
+| `release.*` | artifact signature verification (see §7) |
 
-> **Docker-сокет = root-эквивалент.** Монтируйте его **read-only**
-> (`:/var/run/docker.sock:ro`). Без сокета агент деградирует (не видит
-> контейнеры), но продолжает работать по процессам/ФС/сети — не требует root.
+> **The Docker socket is a root-equivalent.** Mount it **read-only**
+> (`:/var/run/docker.sock:ro`). Without the socket the agent degrades (no
+> containers) but keeps working via processes/filesystem/network — no root
+> required.
 
 ---
 
-## 5. Продакшн: TLS и mTLS
-
-Агент общается с control plane только исходящими соединениями. Для пилота
-включите mTLS:
+## 5. Production: TLS and mTLS
 
 ```bash
-# 1. Свой CA
-openssl req -x509 -newkey ed25519 -days 3650 -nodes \
-  -keyout ca.key -out ca.crt -subj "/CN=AutoGov CA"
-
-# 2. Серверный сертификат control plane (CN/SAN = ваш хостнейм)
-openssl req -newkey ed25519 -nodes -keyout server.key -out server.csr \
-  -subj "/CN=controlplane.internal"
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -days 825 -out server.crt
-
-# 3. Клиентский сертификат агента
-openssl req -newkey ed25519 -nodes -keyout agent.key -out agent.csr \
-  -subj "/CN=agent-01"
-openssl x509 -req -in agent.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-  -days 825 -out agent.crt
+# 1. Your own CA
+openssl req -x509 -newkey ed25519 -days 3650 -nodes -keyout ca.key -out ca.crt -subj "/CN=AutoGov CA"
+# 2. Control-plane server cert (CN/SAN = your hostname)
+openssl req -newkey ed25519 -nodes -keyout server.key -out server.csr -subj "/CN=controlplane.internal"
+openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 825 -out server.crt
+# 3. Agent client cert
+openssl req -newkey ed25519 -nodes -keyout agent.key -out agent.csr -subj "/CN=agent-01"
+openssl x509 -req -in agent.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 825 -out agent.crt
 ```
 
-В `controlplane.json`: `tls.cert_file/key_file` = server.*, `tls.client_ca_file`
-= ca.crt. В `agent.json`: `tls.client_cert_file/key_file` = agent.*, `tls.ca_file`
-= ca.crt. Теперь `/ingest` принимает только агентов с валидным клиентским
-сертификатом **и** токеном.
+Control plane: `tls.cert_file/key_file` = server.\*, `tls.client_ca_file` = ca.crt.
+Agent: `tls.client_cert_file/key_file` = agent.\*, `tls.ca_file` = ca.crt. Now
+`/ingest` accepts only agents with a valid client certificate **and** token.
 
 ---
 
-## 6. Оповещения и SIEM
-
-`notify` в `controlplane.json`:
+## 6. Notifications and SIEM
 
 ```json
 "notify": {
@@ -153,53 +143,38 @@ openssl x509 -req -in agent.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
 }
 ```
 
-- **syslog/CEF** — находки уходят в Wazuh/Splunk в формате CEF (готово к SOC).
-- **on-prem egress-guard**: в `mode: onprem` внешние адресаты (публичные IP)
-  **отклоняются при старте** — защита от трансграничной передачи (Закон РК
-  № 94-V). Чтобы разрешить (например, Telegram) — `allow_external_egress: true`
-  с осознанием последствий.
+- **syslog/CEF** — findings ship to Wazuh/Splunk in CEF format.
+- **On-prem egress guard:** in `mode: onprem`, external destinations (public IPs)
+  are **rejected at startup** — protection against cross-border transfer. To
+  allow (e.g. Telegram), set `allow_external_egress: true`.
 
 ---
 
-## 7. Подписанные артефакты (проверка целостности агента, ТЗ §9)
-
-Гарантирует, что на хосте запущен именно ваш неизменённый бинарник.
+## 7. Signed artifacts (agent integrity, spec §9)
 
 ```bash
-# 1. Один раз: сгенерировать релизный ключ (приватный храните офлайн!)
+# 1. Once: generate a release key (keep the private key offline!)
 ./bin/autogov-sign keygen -out-dir keys
-
-# 2. При каждом релизе: подписать бинарники
-./bin/autogov-sign sign -key keys/release.key -version 0.1.0 \
-  -out manifest.json bin/agent bin/controlplane
-
-# 3. Проверить (то же делает агент при старте)
+# 2. Per release: sign the binaries
+./bin/autogov-sign sign -key keys/release.key -version 0.1.0 -out manifest.json bin/agent bin/controlplane
+# 3. Verify (the agent does the same at startup)
 ./bin/autogov-sign verify -pub keys/release.pub -manifest manifest.json -dir bin
 ```
 
-Разложите на хост `manifest.json` и публичный ключ, в `agent.json`:
+Distribute `manifest.json` and the public key to hosts; in `agent.json`:
 
 ```json
-"release": {
-  "manifest_path": "/etc/autogov/manifest.json",
-  "public_key": "<содержимое release.pub>",
-  "enforce": true
-}
+"release": { "manifest_path": "/etc/autogov/manifest.json", "public_key": "<contents of release.pub>", "enforce": true }
 ```
 
-При `enforce: true` агент **откажется стартовать**, если его бинарник изменён
-или подпись невалидна (fail-closed). При `enforce: false` — только предупреждение
-(для плавного внедрения).
+With `enforce: true` the agent **refuses to start** if its binary is modified or
+the signature is invalid (fail-closed).
 
 ---
 
-## 8. Управление ложными срабатываниями (whitelisting)
+## 8. Whitelisting (false-positive control)
 
-Легитимные (санкционированные ИТ) инстансы — в белый список, чтобы продукт не
-«кричал» на CI/CD-контейнеры:
-
-- В UI: у находки кнопка «В белый список».
-- Через API (admin):
+Mark IT-sanctioned instances so the product doesn't cry wolf on CI/CD:
 
 ```bash
 curl -H "Authorization: Bearer <admin>" -H "Content-Type: application/json" \
@@ -208,13 +183,11 @@ curl -H "Authorization: Bearer <admin>" -H "Content-Type: application/json" \
 ```
 
 `kind`: `host` | `image` | `engine` | `instance` | `identity`; `pattern`
-поддерживает `*` и `?`. Правило сразу пересчитывает находки.
+supports `*` and `?`. Rules re-score findings immediately.
 
 ---
 
-## 9. Отчёты
-
-Экспорт (роль admin):
+## 9. Reports (admin)
 
 ```bash
 curl -H "Authorization: Bearer <admin>" "https://cp/api/v1/reports/export?format=json" -o report.json
@@ -222,35 +195,35 @@ curl -H "Authorization: Bearer <admin>" "https://cp/api/v1/reports/export?format
 curl -H "Authorization: Bearer <admin>" "https://cp/api/v1/reports/export?format=pdf"  -o report.pdf
 ```
 
-JSON — машиночитаемый источник истины; CSV — находки для таблиц; PDF —
-человекочитаемая сводка для CISO.
+JSON is the machine-readable source of truth; CSV is findings for spreadsheets;
+PDF is a human summary for the CISO.
 
 ---
 
-## 10. Проверка критериев приёмки (ТЗ §12)
+## 10. Verifying the acceptance criteria (spec §12)
 
-На тестовом периметре с намеренно поднятыми «теневыми» инстансами:
+On a test perimeter with intentionally deployed “shadow” instances:
 
-1. Поднимите несколько n8n: в Docker, через `npx n8n`, только на `localhost:5678`,
-   и на LAN. → все должны появиться в инвентаре.
-2. Проверьте карту «креды → целевые системы» и риск-категории.
-3. Снимите дамп трафика агента (`tcpdump`) — убедитесь, что **ни одного
-   значения секрета** не уходит (только имена и SHA-256-отпечатки).
-4. Разверните `mode: onprem` — убедитесь, что нет исходящих во внешние сервисы.
-5. Проверьте, что находки приходят в Wazuh (syslog/CEF) и экспортируется отчёт.
+1. Spin up several n8n instances (Docker, `npx n8n`, localhost-only, LAN) →
+   all should appear in the inventory.
+2. Check the “credentials → target systems” map and risk categories.
+3. Capture the agent's traffic (`tcpdump`) — confirm **no secret value** is sent
+   (only names and SHA-256 fingerprints).
+4. Deploy `mode: onprem` — confirm no outbound connections to external services.
+5. Confirm findings reach Wazuh (syslog/CEF) and a report exports.
 
 ---
 
-## Частые вопросы
+## FAQ
 
-**Агент требует root?** Нет. Для Docker-инспекции нужен доступ к сокету
-(read-only), для остального — обычные права. Без сокета функции деградируют, а
-не отваливаются.
+**Does the agent need root?** No. Docker inspection needs read-only socket
+access; the rest uses ordinary permissions. Without the socket, features
+degrade rather than fail.
 
-**Расшифровывает ли агент креды n8n?** Никогда. Только факт наличия, тип и
-целевую систему.
+**Does the agent decrypt n8n credentials?** Never. Only the fact one exists, its
+type, and the target system.
 
-**Работает ли в air-gapped?** Да: нет внешних зависимостей, PDF/подпись/
-объяснения генерируются локально, вуль-фид — офлайн-файл.
+**Does it work air-gapped?** Yes: no external dependencies; PDF/signing/
+explanations are generated locally; the vuln feed is an offline file.
 
-**Windows-хосты?** В MVP — Linux-first. Windows-агент — Этап Э2.
+**Windows hosts?** MVP is Linux-first. Windows agent is Stage 2.

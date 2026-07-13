@@ -29,7 +29,7 @@ live credentials to 1C / CRM / databases / payment APIs, and run workflows
 
 <div align="center">
 <img src="docs/assets/dashboard.png" alt="AutoGov dashboard: risk-scored shadow n8n instances with access map" width="900">
-<br/><sub>The dashboard: risk-scored findings with plain-language explanations, the “instance → credentials → target systems” access map, and sensor inventory.</sub>
+<br/><sub>The dashboard (UI available in English and Russian): risk-scored findings with plain-language explanations, the “instance → credentials → target systems” access map, and sensor inventory.</sub>
 </div>
 
 ---

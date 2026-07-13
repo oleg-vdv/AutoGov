@@ -387,6 +387,7 @@ func (s *Store) UpsertFinding(f *model.Finding) (*model.Finding, bool) {
 	existing.Score = f.Score
 	existing.Severity = f.Severity
 	existing.Title = f.Title
+	existing.TitleEN = f.TitleEN
 	existing.Factors = f.Factors
 	existing.Explanation = f.Explanation
 	existing.ExplanationEN = f.ExplanationEN
