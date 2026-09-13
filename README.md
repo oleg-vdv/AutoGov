@@ -12,7 +12,8 @@ live credentials to 1C / CRM / databases / payment APIs, and run workflows
 **find → document → protect → heal**
 
 [![CI](https://github.com/oleg-vdv/AutoGov/actions/workflows/ci.yml/badge.svg)](https://github.com/oleg-vdv/AutoGov/actions/workflows/ci.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-1F5C4E)](LICENSE)
+[![Commercial licence](https://img.shields.io/badge/commercial%20licence-available-8A6100)](COMMERCIAL.md)
 [![Go 1.24](https://img.shields.io/badge/Go-1.24-00ADD8.svg)](https://go.dev)
 ![Zero dependencies](https://img.shields.io/badge/dependencies-stdlib_only-9ece6a.svg)
 ![Status: MVP](https://img.shields.io/badge/status-MVP%20%C2%B7%20pilot--ready-orange.svg)
@@ -141,6 +142,17 @@ secret values will not be merged.
 
 ## License
 
-[Apache License 2.0](LICENSE).
+**AGPL-3.0-or-later** — see [LICENSE](LICENSE).
+
+- Scan your own estate, change the code, run it wherever you like — freely.
+- **Ship it inside a product or a service you sell** — an MSSP offering, a
+  security platform, a hosted scanner — and the AGPL obliges you to release the
+  source of that product under the same terms.
+- If that does not work for you, a **commercial licence** removes the
+  obligation: see [COMMERCIAL.md](COMMERCIAL.md).
+
+Releases up to and including the last Apache-2.0 tag stay under Apache-2.0 —
+nothing already published is taken back. The change applies from here onward,
+and the copyright is held by a single author.
 
 <div align="center"><sub>Built to give security teams a control plane for the shadow-automation boom. Not affiliated with n8n GmbH — AutoGov inspects instances you already run, it does not host n8n.</sub></div>
